@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
-from .models import Restaurant
-from .forms import RestaurantForm, SignupForm, SigninForm
+from .models import Restaurant, Item
+from .forms import RestaurantForm, SignupForm, SigninForm, ItemForm
 from django.contrib.auth import login, authenticate, logout
 
 def signup(request):
@@ -50,8 +50,10 @@ def restaurant_list(request):
 
 
 def restaurant_detail(request, restaurant_id):
+    restaurant_obj = Restaurant.objects.get(id=restaurant_id)
     context = {
-        "restaurant": Restaurant.objects.get(id=restaurant_id)
+        "restaurant": restaurant_obj,
+        "items": Item.objects.filter(restaurant=restaurant_obj)
     }
     return render(request, 'detail.html', context)
 
@@ -60,19 +62,30 @@ def restaurant_create(request):
     if request.method == "POST":
         form = RestaurantForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            restaurant=form.save(commit=False)
+            restaurant.owner=request.user
+            restaurant.save()
             return redirect('restaurant-list')
     context = {
         "form":form,
     }
     return render(request, 'create.html', context)
 
-def item_create(request):
-
+def item_create(request, restaurant_id):
+    form = ItemForm()
+    restaurant_obj = Restaurant.objects.get(id=restaurant_id)   #is this the correct way
+    if request.method == "POST":
+        form = ItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            item=form.save(commit=False)
+            item.restaurant = restaurant_obj    # here i'm not sure what to do
+            item.save()
+            return redirect('restaurant-list')
     context = {
-        
+        "form":form,
+       "restaurant_obj":restaurant_obj    # i dont understand this 
     }
-    return render(request, 'item_create.html', context)
+    return render(request,'item_create.html', context)
 
 def restaurant_update(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
@@ -92,3 +105,4 @@ def restaurant_delete(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
     restaurant_obj.delete()
     return redirect('restaurant-list')
+
